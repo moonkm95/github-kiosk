@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GitHub 키오스크 — 터미널 없이 버튼으로</title>
+<style>
+  :root{
+    --gh-dark:#0d1117; --navy:#16233f; --blue:#0969da; --good:#1c8a55; --warn:#b6781a; --red:#cf222e;
+    --ink:#1f2328; --muted:#656d76; --line:#d8dee4; --bg:#f6f8fa; --card:#fff; --radius:14px;
+    --shadow:0 8px 26px rgba(31,35,40,.10); --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","Segoe UI",sans-serif;line-height:1.6;}
+  .top{background:linear-gradient(135deg,#0d1117,#1b2a4a 70%);color:#e6edf3;padding:22px 24px;}
+  .top .wrap{max-width:1000px;margin:0 auto;}
+  .top h1{margin:0 0 4px;font-size:1.45rem;font-weight:900;letter-spacing:-.02em;}
+  .top p{margin:0;color:#9da7b3;font-size:.92rem;}
+  .who{margin-top:12px;display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:.82rem;color:#aeb7c2;}
+  .who b{color:#7ee2b8;}
+  .shell{max-width:1000px;margin:0 auto;padding:20px 18px 80px;}
+  .banner{border-radius:12px;padding:13px 16px;margin:16px 0;font-size:.9rem;line-height:1.7;}
+  .banner.warn{background:#fff8ec;border:1px solid #f4dca6;color:#7a5500;}
+  .banner.warn code{background:#fff;border:1px solid #f0d999;padding:1px 6px;border-radius:5px;font-family:var(--mono);font-size:.85em;}
+  .banner.help{background:#eff6ff;border:1px solid #bcdcff;color:#0a3b73;}
+  .bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:14px 0;}
+  .btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:9px;padding:9px 15px;font-size:.88rem;font-weight:700;cursor:pointer;font-family:inherit;}
+  .btn:hover{background:#f0f2f5;}
+  .btn.primary{background:var(--good);color:#fff;border-color:var(--good);}
+  .btn.primary:disabled{opacity:.5;cursor:not-allowed;}
+  .sum{font-size:.85rem;color:var(--muted);} .sum b{color:var(--navy);}
+  .rootrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:.84rem;color:var(--muted);margin:4px 0 10px;}
+  .rootrow code{background:#eef1f4;padding:2px 8px;border-radius:6px;font-family:var(--mono);font-size:.85em;color:#2b3a5c;}
+  .rootrow input{padding:7px 11px;border:1px solid var(--line);border-radius:8px;font-size:.84rem;min-width:240px;font-family:inherit;}
+  .filter{width:100%;max-width:340px;padding:8px 12px;border:1px solid var(--line);border-radius:9px;font-size:.86rem;margin-bottom:8px;font-family:inherit;}
+  .list{border:1px solid var(--line);border-radius:12px;max-height:460px;overflow-y:auto;background:#fff;box-shadow:var(--shadow);}
+  .row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #eef1f4;font-size:.86rem;}
+  .row:last-child{border-bottom:none;} .row.act{background:#fff8ec;}
+  .row .rn{font-weight:700;color:var(--navy);flex:none;width:210px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .row .rb{flex:none;min-width:90px;}
+  .row .rd{color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.82rem;}
+  .row .ra{display:flex;gap:6px;flex:none;}
+  .badge{font-size:.7rem;font-weight:700;padding:1px 8px;border-radius:20px;margin-right:3px;}
+  .badge.clean{background:#e3f6ec;color:var(--good);} .badge.dirty{background:#fde8e8;color:var(--red);}
+  .badge.ahead{background:#fef3da;color:var(--warn);} .badge.arch{background:#eef0f4;color:var(--muted);}
+  .badge.norem{background:#f3e8ff;color:#8250df;}
+  .mini{font-size:.72rem;padding:3px 9px;border:1px solid var(--line);background:#fff;border-radius:7px;cursor:pointer;font-family:inherit;color:var(--ink);}
+  .mini:hover{background:#f0f2f5;} .mini.go{border-color:var(--good);color:var(--good);font-weight:700;}
+  .log{margin-top:12px;background:#0d1117;color:#c9d1d9;border-radius:12px;padding:14px 16px;font-family:var(--mono);font-size:.82rem;max-height:280px;overflow-y:auto;line-height:1.6;}
+  .log .l{margin:1px 0;white-space:pre-wrap;word-break:break-all;}
+  .log .ok{color:#56d364;} .log .err{color:#ff7b72;} .log .skip{color:#8b949e;} .log .hd{color:#58a6ff;font-weight:700;}
+  .empty{padding:22px;text-align:center;color:var(--muted);font-size:.88rem;}
+  .foot{margin-top:30px;color:#9aa3b5;font-size:.78rem;text-align:center;}
+  h2{font-size:1.1rem;margin:18px 0 4px;}
+  details{margin:14px 0;font-size:.88rem;color:var(--muted);}
+  details summary{cursor:pointer;font-weight:700;color:var(--navy);}
+  details p,details li{line-height:1.8;}
+</style>
+</head>
+<body>
+<div class="top"><div class="wrap">
+  <h1>🐙 GitHub 키오스크</h1>
+  <p>터미널 없이, <b>버튼으로</b> 내 GitHub 저장소를 관리합니다.</p>
+  <div class="who" id="who">불러오는 중…</div>
+</div></div>
+
+<main class="shell">
+  <div id="banner"></div>
+
+  <div class="bar">
+    <button class="btn" id="refresh">🔄 새로고침</button>
+    <button class="btn primary" id="pushAll" disabled>불러오는 중…</button>
+    <span class="sum" id="summary">상태 불러오는 중…</span>
+  </div>
+  <div class="rootrow">
+    <span>📂 프로젝트 폴더</span> <code id="rootShow">…</code>
+    <input id="rootInput" placeholder="다른 폴더 경로 입력 (예: ~/Desktop)">
+    <button class="mini" id="rootSet">이 폴더로 변경</button>
+  </div>
+  <input class="filter" id="filter" placeholder="🔍 저장소 이름·설명 검색…">
+  <div class="list" id="status"><div class="empty">상태를 불러오는 중…</div></div>
+  <div class="log" id="log" hidden></div>
+
+  <details>
+    <summary>처음이신가요? — 이 키오스크가 하는 일 / 막힐 때</summary>
+    <p style="margin-top:8px">이 화면은 <b>내 컴퓨터(127.0.0.1)</b>에서만 열리는 개인 도구입니다. 위 목록은 프로젝트 폴더 안의 모든 Git 저장소이고, 버튼은 실제로 <code>git</code>·<code>gh</code> 명령을 대신 실행합니다.</p>
+    <ul>
+      <li><b>변경/미푸시</b> 배지가 있는 저장소만 “커밋·푸시”가 필요합니다. <b>최신</b>이면 할 일 없음.</li>
+      <li>“GitHub 로그인 필요”가 보이면, 동봉된 실행 파일을 다시 켜거나 터미널에서 <code>gh auth login</code> 한 번 실행 후 새로고침하세요.</li>
+      <li><b>원격없음</b> 배지 = 아직 GitHub에 안 올라간 로컬 전용 저장소입니다(푸시하려면 먼저 GitHub에 저장소를 만들어 연결해야 합니다).</li>
+      <li>푸시가 거부되면 대개 <b>100MB 초과 파일</b> 때문입니다 — 로그 메시지가 알려줍니다.</li>
+    </ul>
+  </details>
+
+  <div class="foot">GitHub 키오스크 · MOITONG 교육용 배포판 · 모든 동작은 내 컴퓨터에서만 실행됩니다</div>
+</main>
+
+<script>
+(function(){
+  var API='/api/github';
+  var DATA=null, OWNER='', ROOT='';
+  var $=function(id){return document.getElementById(id);};
+  function esc(s){return (s==null?'':String(s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  function log(cls,msg){var L=$('log');L.hidden=false;var d=document.createElement('div');d.className='l '+(cls||'');d.textContent=msg;L.appendChild(d);L.scrollTop=L.scrollHeight;}
+  function isAct(r){return r.dirty>0||(r.ahead||0)>0;}
+
+  function badges(r){
+    var b='';
+    if(!r.has_remote) b+='<span class="badge norem">원격없음</span>';
+    if(r.archived) b+='<span class="badge arch">보관됨</span>';
+    if(r.dirty>0) b+='<span class="badge dirty">변경 '+r.dirty+'</span>';
+    if((r.ahead||0)>0) b+='<span class="badge ahead">미푸시 '+r.ahead+'</span>';
+    if(r.dirty===0 && !(r.ahead||0) && r.has_remote && !r.archived) b+='<span class="badge clean">최신</span>';
+    return b;
+  }
+  function renderRows(){
+    if(!DATA) return;
+    var f=($('filter').value||'').trim().toLowerCase();
+    var rs=DATA.repos.filter(function(r){return !f||r.name.toLowerCase().indexOf(f)>=0||(r.description||'').toLowerCase().indexOf(f)>=0;});
+    rs.sort(function(a,b){return (isAct(a)?0:1)-(isAct(b)?0:1)||a.name.localeCompare(b.name);});
+    if(!rs.length){ $('status').innerHTML='<div class="empty">'+(DATA.repos.length?'일치하는 저장소가 없습니다.':'이 폴더에서 Git 저장소를 찾지 못했습니다. 위에서 폴더를 바꿔 보세요.')+'</div>'; return; }
+    $('status').innerHTML=rs.map(function(r){
+      return '<div class="row'+(isAct(r)?' act':'')+'">'
+        +'<span class="rn" title="'+esc(r.rel||r.name)+'">'+esc(r.name)+'</span>'
+        +'<span class="rb">'+badges(r)+'</span>'
+        +'<span class="rd" title="'+esc(r.description)+'">'+(r.description?esc(r.description):'<span style="opacity:.5">설명 없음</span>')+'</span>'
+        +'<span class="ra">'
+        +(isAct(r)&&r.has_remote?'<button class="mini go" data-push="'+esc(r.name)+'">커밋·푸시</button>':'')
+        +(r.has_remote?'<button class="mini" data-desc="'+esc(r.gh_name||r.name)+'">설명</button>':'')
+        +(r.has_remote?'<button class="mini" data-arch="'+esc(r.gh_name||r.name)+'" data-on="'+(r.archived?1:0)+'">'+(r.archived?'복구':'보관')+'</button>':'')
+        +'</span></div>';
+    }).join('');
+  }
+  function renderTop(){
+    var s=DATA.summary, act=DATA.repos.filter(isAct);
+    $('summary').innerHTML='전체 <b>'+s.total+'</b> · 할 일 <b>'+act.length+'</b> · 최신 <b>'+s.clean+'</b> <span style="opacity:.6">· '+esc(s.scanned_at)+'</span>';
+    var pb=$('pushAll'); pb.disabled=act.length===0;
+    pb.textContent=act.length?('⬆️ 변경된 '+act.length+'개 커밋·푸시'):'✓ 전부 최신';
+    $('rootShow').textContent=ROOT;
+    $('who').innerHTML = OWNER ? ('✓ <b>'+esc(OWNER)+'</b> 님으로 로그인됨') : '⚠️ GitHub 미로그인';
+    $('banner').innerHTML = OWNER ? '' :
+      '<div class="banner warn">⚠️ <b>GitHub에 로그인되어 있지 않습니다.</b> 동봉된 실행 파일(start)을 다시 켜면 자동으로 로그인 단계로 안내합니다. 직접 하려면 터미널에서 <code>gh auth login</code> 을 한 번 실행한 뒤 <b>새로고침</b>하세요.</div>';
+  }
+  async function load(){
+    $('summary').textContent='상태 불러오는 중…';
+    try{
+      var c=await (await fetch(API+'/config',{cache:'no-store'})).json();
+      OWNER=c.owner||''; ROOT=c.root||'';
+      var r=await fetch(API+'/status',{cache:'no-store'});
+      if(!r.ok){ $('status').innerHTML='<div class="empty">상태를 불러오지 못했습니다 (HTTP '+r.status+').</div>'; return; }
+      DATA=await r.json(); renderTop(); renderRows();
+    }catch(e){ $('status').innerHTML='<div class="empty">연결 실패: '+esc(String(e))+'<br>실행 파일(server)이 켜져 있는지 확인하세요.</div>'; }
+  }
+  async function commitPush(names){
+    if(!names.length) return;
+    var L=$('log'); L.hidden=false; L.innerHTML=''; $('pushAll').disabled=true;
+    log('hd','▶ 커밋·푸시 시작 — '+names.length+'개');
+    try{
+      var resp=await fetch(API+'/commit-push',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({names:names})});
+      if(!resp.ok){ log('err','요청 실패: HTTP '+resp.status); return; }
+      var rd=resp.body.getReader(), dec=new TextDecoder(), buf='';
+      while(true){ var ch=await rd.read(); if(ch.done) break; buf+=dec.decode(ch.value,{stream:true});
+        var parts=buf.split('\n'); buf=parts.pop();
+        parts.forEach(function(ln){ if(!ln.trim())return; var o; try{o=JSON.parse(ln);}catch(e){return;}
+          if(o.type==='progress') log('','  ['+o.i+'] '+o.name+' …');
+          else if(o.type==='result'){ if(o.skipped) log('skip','  · '+o.name+' — '+o.message); else if(o.ok) log('ok','  ✓ '+o.name+' — '+o.message); else log('err','  ✗ '+o.name+' — '+o.message); }
+          else if(o.type==='done') log('hd','■ 완료 — 성공 '+o.ok+' · 건너뜀 '+o.skip+' · 실패 '+o.fail);
+        });
+      }
+    }catch(e){ log('err','오류: '+e); } finally{ await load(); }
+  }
+  async function describe(n){
+    var cur=''; (DATA.repos||[]).forEach(function(r){ if((r.gh_name||r.name)===n) cur=r.description||''; });
+    var d=prompt('"'+n+'" 저장소 설명:', cur); if(d===null) return;
+    log('hd','설명 변경 — '+n);
+    try{ var o=await (await fetch(API+'/describe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:n,description:d})})).json();
+      o.ok?(log('ok','  ✓ 변경됨'),load()):log('err','  ✗ '+(o.error||'실패')); }catch(e){ log('err','  ✗ '+e); }
+  }
+  async function archive(n,on){
+    var to=!on; if(!confirm('"'+n+'"을(를) '+(to?'보관(읽기전용)하시겠어요? 언제든 복구 가능합니다.':'복구(활성화)하시겠어요?'))) return;
+    log('hd',(to?'보관':'복구')+' — '+n);
+    try{ var o=await (await fetch(API+'/archive',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:n,archived:to})})).json();
+      o.ok?(log('ok','  ✓ 완료'),load()):log('err','  ✗ '+(o.error||'실패')); }catch(e){ log('err','  ✗ '+e); }
+  }
+  async function setRoot(){
+    var v=($('rootInput').value||'').trim(); if(!v) return;
+    try{ var o=await (await fetch(API+'/set-root',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({root:v})})).json();
+      if(o.ok){ $('rootInput').value=''; load(); } else alert(o.error||'폴더 변경 실패'); }catch(e){ alert(e); }
+  }
+
+  $('refresh').addEventListener('click',load);
+  $('pushAll').addEventListener('click',function(){ commitPush(DATA?DATA.repos.filter(isAct).map(function(r){return r.name;}):[]); });
+  $('filter').addEventListener('input',renderRows);
+  $('rootSet').addEventListener('click',setRoot);
+  $('rootInput').addEventListener('keydown',function(e){ if(e.key==='Enter') setRoot(); });
+  $('status').addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b) return;
+    if(b.dataset.push!=null) commitPush([b.dataset.push]);
+    else if(b.dataset.desc!=null) describe(b.dataset.desc);
+    else if(b.dataset.arch!=null) archive(b.dataset.arch, b.dataset.on==='1');
+  });
+  load();
+})();
+</script>
+</body>
+</html>
